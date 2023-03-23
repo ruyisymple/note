@@ -1,0 +1,467 @@
+https://172.253.32.101:8443/automation-api
+
+# （1）目录操作
+
+## 1、目录配置合法性验证
+
+接口：(post)/build
+
+传入json文件，例如
+
+```
+{
+    "Defaults" : {
+        "Application" : "TestApp",
+        "SubApplication" : "TestA",
+        "RunAs" : "user01",
+        "Host" : "HOST",
+
+        "Job": {
+            "When" : {
+                "Months": ["JAN", "OCT", "DEC"],
+                "MonthDays":["22","1","11"],
+                "WeekDays":["MON","TUE", "WED", "THU", "FRI"],
+                "FromTime":"0300",
+                "ToTime":"2100"
+            },
+            "ActionIfFailure" : {
+                "Type": "If",       
+                "CompletionStatus": "NOTOK",
+                
+                "mailToTeam": {
+                    "Type": "Mail",
+                    "Message": "%%JOBNAME failed",
+                    "To": "team@mycomp.com"
+                }
+            }
+        }
+    },
+        "AutomationAPISampleFlow": {
+        "Type": "Folder",
+        "Comment" : "Code reviewed by John",
+
+        "CommandJob1": {
+            "Type": "Job:Command",
+            "Command": "echo my 1st job"
+        },
+
+        "ScriptJob": {
+            "Type": "Job:Script",
+          	"FilePath":"SCRIPT_PATH",
+          	"FileName":"SCRIPT_NAME"
+        },
+        "CommandJob2": {
+            "Type": "Job:Command",
+            "Command": "echo my 1st job"
+        },
+        "Flow": {
+            "Type": "Flow",
+            "Sequence": ["CommandJob1","CommandJob2" ]
+        },
+		"Flow1": {
+            "Type": "Flow",
+            "Sequence": ["CommandJob1","ScriptJob" ]
+        }
+    }
+}
+
+
+```
+
+参数描述：        "Defaults"全局默认参数（可以在具体作业中修改，如调度时间）
+
+​								 "Application" : "TestApp",     逻辑层属主
+​       				 		"SubApplication" : "TestA",    逻辑层分类
+​       						 "RunAs" : "user01",        执行用户
+​        						"Host" : "HOST",    运行主机
+
+​					When:定义时间（参数https://docs.bmc.com/docs/automation-api/monthly/job-properties-1116950305.html#JobProperties-When）
+
+​					ActionIfFailure  当作业没有完成时触发事件 （"Type": "If":当作业满足某个状态时触发事件）
+
+​			
+
+​					AutomationAPISampleFlow 文件夹名称（"Type": "Folder"：定义一个文件夹类型）
+
+​					CommandJob1作业名称（"Type": "Job:Command"：定义一个作业类型，可以定义各种作业类型（https://docs.bmc.com/docs/automation-api/monthly/job-types-1116950308.html））
+
+​					Flow 依赖名称（"Type": "Flow"：定义依赖）可定义多个
+
+​				 "Sequence": ["CommandJob1", "ScriptJob"]  按照此队列执行作业
+
+
+
+![image-20220822133132501](/home/xcadmin/.config/Typora/typora-user-images/image-20220822133132501.png)
+
+
+
+
+
+## 2、目录查询、创建、修改和删除,目录层级配置
+
+### 目录查询：(get)/deploy/jobs    
+
+(get)/deploy/jobs(获取定义的文件夹和作业)
+
+传参：format（非必须），输出格式json（默认）或者xml
+
+​			folder ，要查询的文件夹
+
+​			ctm,默认ctm
+
+​			server，测试的是ctrlm1
+
+作用：获取与请求的搜索条件匹配的作业和文件夹（以所需的格式 - JSON 或 XML）。
+
+
+
+![image-20220822134755444](/home/xcadmin/.config/Typora/typora-user-images/image-20220822134755444.png)
+
+
+
+
+
+### 目录创建：通过buil接口验证编译json文件，然后通过run接口创建
+
+​		文件夹可分为普通文件夹、子文件夹（层级配置）、简单文件夹
+​		示例子文件夹（目录）
+
+```
+{
+    "FolderWithSubFolders":{
+        "Type":"Folder",
+        "SubFolder1":{
+            "Type":"SubFolder",
+            "job1": {
+                "Type": "Job:Script",
+                "FileName": "scriptname.sh",
+                "FilePath": "/home/user/scripts",
+                "RunAs": "em900cob"
+            }
+        },
+        "SubFolder2":{
+            "Type":"SubFolder",
+            "job1": {
+                "Type": "Job:Script",
+                "FileName": "scriptname2.sh",
+                "FilePath": "/home/user/scripts",
+                "RunAs": "em900cob"
+            }
+        }
+    }
+}
+```
+
+### 目录修改：目前只能通过修改json文件来修改作业和目录（暂不支持增量修改）
+
+​				(post)/deploy(部署定义的文件)
+
+​				传参：definitionsFile（必须），部署到服务器上的文件
+
+​			deployDescriptorFile（非必须），部署描述性文件
+
+​			additionalConfiguration（非必须），附加配置以启用本地连接配置文件的跳过测试
+
+​			作用：将本地文件部署到服务器上
+
+如新增文件夹newFolder
+
+修改json
+
+```
+{
+    "Defaults" : {
+        "Application" : "TestApp",
+        "SubApplication" : "TestA",
+        "RunAs" : "user01",
+        "Host" : "HOST",
+
+        "Job": {
+            "When" : {
+                "Months": ["JAN", "OCT", "DEC"],
+                "MonthDays":["22","1","11"],
+                "WeekDays":["MON","TUE", "WED", "THU", "FRI"],
+                "FromTime":"0300",
+                "ToTime":"2100"
+            },
+            "ActionIfFailure" : {
+                "Type": "If",       
+                "CompletionStatus": "NOTOK",
+                
+                "mailToTeam": {
+                    "Type": "Mail",
+                    "Message": "%%JOBNAME failed",
+                    "To": "team@mycomp.com"
+                }
+            }
+        }
+    },
+        "AutomationAPISampleFlow": {
+        "Type": "Folder",
+        "Comment" : "Code reviewed by John",
+
+        "CommandJob1": {
+            "Type": "Job:Command",
+            "Command": "echo my 1st job"
+        },
+
+        "ScriptJob": {
+            "Type": "Job:Script",
+          	"FilePath":"SCRIPT_PATH",
+          	"FileName":"SCRIPT_NAME"
+        },
+        "CommandJob2": {
+            "Type": "Job:Command",
+            "Command": "echo my 1st job"
+        },
+        "newFolder": {
+            "Type":"SubFolder",
+            "job1": {
+               "Type": "Job:Command",
+			   "Command": "echo my 1st job",
+               "RunAs": "em900cob"
+            }
+		},
+        "Flow": {
+            "Type": "Flow",
+            "Sequence": ["CommandJob1","CommandJob2" ]
+        },
+		"Flow1": {
+            "Type": "Flow",
+            "Sequence": ["CommandJob1","ScriptJob" ]
+        }
+    }
+}
+
+```
+
+调用接口(post)/deploy
+
+![image-20220822152353111](/home/xcadmin/.config/Typora/typora-user-images/image-20220822152353111.png)
+
+
+
+### 目录删除：
+
+注意：删除的是整个目录，并非某个子目录
+
+(delete)/deploy/folder/{server}/{folderName}(删除一个文件夹)
+
+传参：server（必须），服务器名称
+
+​			folderName（必须），文件夹名称
+
+作用：删除文件夹
+
+![image-20220822153014324](/home/xcadmin/.config/Typora/typora-user-images/image-20220822153014324.png)
+
+调用https://172.253.32.101:8443/automation-api/deploy/folder/ctrlm1/test_folder01后
+
+![image-20220822153039163](/home/xcadmin/.config/Typora/typora-user-images/image-20220822153039163.png)
+
+# （2）作业操作
+
+## 1、作业配置合法性验证
+
+（和目录一起验证的，其实就是验证一下json文件是否符合要求）
+
+接口：(post)/build
+
+## 2、作业查询、创建、修改和删除；(只能按照目录进行操作，需要先下载整个目录，合并单个作业的内容，再更新整个目录)
+
+### 作业查询：
+
+和目录相同
+
+(get)/deploy/jobs(获取定义的文件夹和作业)
+
+### 作业创建：
+
+和目录一样，在json文件里面定义作业，然后调用bulid接口和run接口
+
+作业属性详情：https://docs.bmc.com/docs/automation-api/monthly/job-properties-1116950305.html
+
+简单示例：
+
+```
+ "CommandJob1": {
+            "Type": "Job:Command",
+            "Command": "echo my 1st job"
+        },
+
+ "ScriptJob": {
+            "Type": "Job:Script",
+          	"FilePath":"SCRIPT_PATH",
+          	"FileName":"SCRIPT_NAME"
+        }
+```
+
+### 作业修改：
+
+**一般是修改作业的定义**：和目录一样，通过deploy接口部署修改后的json即可。
+
+修改作业实例（当天作业运行实例）：(post)/run/job/{jobId}/modify(修改作业实例，并不是修改定义)
+
+注意：此作业必须是held为true，已经停止处理的作业
+
+传参：jobDefinitionsFile (必须)，一个 JSON 文件，其中**包含单个作业**的详细信息，包括您要修改的设置。不能有别的文件夹之类的属性，独立的json文件
+
+​			jobId (必须)
+
+![image-20220822161956007](/home/xcadmin/.config/Typora/typora-user-images/image-20220822161956007.png)
+
+### 作业删除
+
+删除作业定义：（版本 9.0.21才支持，目前未测试）
+
+(delete)/deploy/job/{jobPath}/{server}/{library}（删除作业）
+
+传参：jobPath（必须），作业路径，使用冒号将父文件夹与子文件夹分开
+
+​			server（非必须），服务器，除非系统中只有一个 Control-M/Server，否则是必需的。
+
+​			library（非必须），资源库
+
+作用：删除作业
+
+### 删除作业实例：
+
+注意删除前要标记held为true
+
+(post)/run/job/{jobId}/delete(标记删除一个作业)
+
+传参：jobId(必须)
+
+作用：删除作业的实例
+
+## 3、作业依赖查询、创建、修改和删除
+
+# （3）日历创建
+
+1、日历创建、修改和删除
+
+日历创建和修改：
+
+没有单独的接口用于日历的创建和修改。（日历一般不会改动）
+
+### 日历创建：
+
+添加json文件，先调用bulid然后在run
+
+### 日历修改：
+
+修改完json文件后，调用deploy。
+
+简单的日历样式：
+
+```
+{
+   "RegularCalendar": {
+      "Type" :  "Calendar:Regular",
+      "Description" : "My regular calendar",
+      "Server" : "serverName",
+      "Alias" : "ZOS_NAME",
+      "When": {
+        "Years": [{
+           "Year": "2020",
+           "JAN" : ["10-15","22","24"],
+           "APR" : ["1","12-22"]
+        },{
+           "Year": "2021",
+           "FEB" : ["5-10","22","24"],
+           "APR" : ["4","12-18"],
+           "JUN" : ["2"]
+        }]
+      }
+   }
+}
+```
+
+### 日历删除：
+
+(delete)/deploy/calendar/{calendarName}(删除日历)
+
+传参：calendarName（必须）
+
+​			server（非必须）
+
+作用：删除日历
+
+# （4）作业运行
+
+## 1、作业发起运行  （先build ,然后run）
+
+```
+接口：(post)/run(运行作业)     
+
+传参：jobDefinitionsFile（必须），运行的作业
+
+​			 deployDescriptorFile（非必须），部署描述文件
+
+​			additionalConfiguration（非必须），附加配置以启用本地连接配置文件的跳过测试
+
+作用：运行作业
+```
+
+![image-20220822133740603](/home/xcadmin/.config/Typora/typora-user-images/image-20220822133740603.png)
+
+
+
+![image-20220822133758887](/home/xcadmin/.config/Typora/typora-user-images/image-20220822133758887.png)
+
+```
+
+暂时没有使用
+
+接口：(post)/run/order(筛选文件夹运行作业)
+
+传参：data（非必须），json文件
+
+作用：根据给定的过滤器从选定的文件夹运行作业
+```
+
+### 
+
+## 2、hold作业，set ok
+
+```
+(post)/run/job/{jobId}/hold(抓取一个作业)
+
+传参：jobId(必须)
+
+作用：保留该作业，使其在被释放之前不会启动
+
+
+```
+
+查询状态：(get)/run/jobs/status  （传入文件夹名称，作业名称，见api）
+
+![image-20220822145218055](/home/xcadmin/.config/Typora/typora-user-images/image-20220822145218055.png)
+
+held是false，jobid是ctrlm1:0jvso
+
+调用接口(post)/run/job/{jobId}/hold
+
+![image-20220822145614054](/home/xcadmin/.config/Typora/typora-user-images/image-20220822145614054.png)
+
+再查询状态（可以使用jobid查询：(get)/run/job/{jobId}/status）
+
+![image-20220822145801718](/home/xcadmin/.config/Typora/typora-user-images/image-20220822145801718.png)
+
+
+
+```
+(post)/run/job/{jobId}/setToOk(将作业的结束状态设置为ok)
+
+传参：jobId （必须）
+
+作用：将作业的状态设置为OK
+```
+
+![image-20220822145931672](/home/xcadmin/.config/Typora/typora-user-images/image-20220822145931672.png)
+
+再查询状态
+
+![image-20220822150052875](/home/xcadmin/.config/Typora/typora-user-images/image-20220822150052875.png)
+
+可以发现status由waithost 转为 ended ok
